@@ -7,7 +7,7 @@ from tensorflow.keras.layers import Input
 
 class Mlp(tf.keras.Model):
 
-	def __init__(self, n_classes, activation, initializer, *layers_sizes):
+	def __init__(self, n_classes, activation, activation_out, initializer, *layers_sizes):
 		super(Mlp, self).__init__()
 		if isinstance(layers_sizes, int):
 			self.layers_sizes = (layers_sizes,)
@@ -16,7 +16,7 @@ class Mlp(tf.keras.Model):
 		self.dense_layers = [tf.keras.layers.Dense(
 			units=u, activation=activation, kernel_initializer=initializer)
 			for u in self.layers_sizes]
-		self.out = tf.keras.layers.Dense(n_classes - 1, activation='sigmoid')
+		self.out = tf.keras.layers.Dense(n_classes, activation=activation_out)
 		self.n_classes = n_classes
 
 	def call(self, inputs, **kwargs):
@@ -34,3 +34,7 @@ class Mlp(tf.keras.Model):
 	@classmethod
 	def from_config(cls, config):
 		return cls(**config)
+
+##
+#a = tf.keras.layers.Dense(units=30, activation='linear', kernel_initializer='he_uniform')
+#y = a(x)

@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 #import tensorflow.contrib.slim as slim
+ 
 import os
 import tempfile
 import pickle
@@ -10,6 +11,8 @@ import warnings
 import numpy as np
 import tensorflow as tf
 import mnist_data
+import fashionmnist_data
+import cifar10_data
 from copy import deepcopy
 from sacred import Experiment
 from sklearn.model_selection import train_test_split
@@ -19,7 +22,8 @@ from sacred.observers import FileStorageObserver, MongoObserver
 from models import Mlp
 from data_classes import Circular, Dataset
 
- 
+
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -57,27 +61,31 @@ def config():
 	    model_type='Mlp',
 	    layers_sizes=[30, 30],
 	    activation='linear',
-	    loss='binary_crossentropy',
+        activation_out='softmax',
+	    loss= 'binary_crossentropy',# 'binary_crossentropy', # categorical_crossentropy 
 	    initialization='he_uniform')
 
 
-@ex.capture
+@ex.capture # capture fills in missing paramteres
 def load_model(learning_model):
-
 	#n_classes = len(set(x['_class'] for x in dataset['classes']))
-	n_classes = 11
+	n_classes = 10
+	#print('learning', learning_model)
 	models_dict = {'Mlp': Mlp}
+    
 	if isinstance(learning_model['layers_sizes'], int):
 		layers_sizes = (learning_model['layers_sizes'],)
 	else:
 		layers_sizes = learning_model['layers_sizes']
 	print(layers_sizes)
+
 	model = models_dict[learning_model['model_type']](
 		n_classes,
 		learning_model['activation'],
+        learning_model['activation_out'],
 		learning_model['initialization'],
 		*layers_sizes)
-
+	
 	return model
 
 
@@ -94,14 +102,16 @@ def random_batch(x, y, batch_size):
 
 @ex.automain
 def run(_run, training, learning_model):
-
+	
 	training_epochs = training['training_epochs']
 	batch_size = training['batch_size']
 
 	# loading data
-	train_data, train_labels, validation_data, validation_labels, test_data, test_labels = mnist_data.prepare_MNIST_data(True)
-
-	# Prepare the training dataset.
+	#train_data, train_labels, validation_data, validation_labels, test_data, test_labels = mnist_data.prepare_MNIST_data(True)
+	#train_data, train_labels, validation_data, validation_labels, test_data, test_labels = fashionmnist_data.prepare_MNIST_data(True)
+	train_data, train_labels, validation_data, validation_labels, test_data, test_labels = cifar10_data.prepare_MNIST_data(True)
+	#print(test_labels)
+    # Prepare the training dataset.
 	train_dataset = tf.data.Dataset.from_tensor_slices((train_data, train_labels))
 	train_dataset = train_dataset.shuffle(buffer_size=1024).batch(batch_size)
 
@@ -114,6 +124,7 @@ def run(_run, training, learning_model):
 	test_dataset = test_dataset.shuffle(buffer_size=1024).batch(batch_size)
 
 	# loading the compiled model
+	print('load models')
 	model = load_model()
 
 	# instantiate optimizer
@@ -163,15 +174,16 @@ def run(_run, training, learning_model):
 			# save loss in training history
 			training_history['loss'].append(loss.numpy().mean())
 
-			# updating gradients history
-			for idx in range(len(model.layers)):
-				gradients_dict[f'layer_{idx}']['weights'].append(gradients[idx+0].numpy())
-				gradients_dict[f'layer_{idx}']['bias'].append(gradients[idx+1].numpy())
+		# updating gradients history every steps/ epoch
+		for idx in range(len(model.layers)):
+			gradients_dict[f'layer_{idx}']['weights'].append(gradients[idx+0].numpy())
+			gradients_dict[f'layer_{idx}']['bias'].append(gradients[idx+1].numpy())
 
-			# updating weights history
-			for idx in range(len(model.layers)):
-				weights_dict[f'layer_{idx}']['weights'].append(weights[idx+0].numpy())
-				weights_dict[f'layer_{idx}']['bias'].append(weights[idx+1].numpy())
+		# updating weights history
+		for idx in range(len(model.layers)):
+			weights_dict[f'layer_{idx}']['weights'].append(weights[idx+0].numpy())
+			weights_dict[f'layer_{idx}']['bias'].append(weights[idx+1].numpy())
+
 
 		# Evaluate accuracy at the end of each epoch
 		train_acc = train_acc_metric.result()
