@@ -1,0 +1,15 @@
+
+epoch:1
+train_acc:0.9145740740740741
+train_loss:tensor(0.2103, grad_fn=<NllLossBackward0>)
+valid_acc:0.9165
+valid_loss:tensor(0.0975, grad_fn=<NllLossBackward0>)
+test_acc:0.9245
+test_loss:tensor(0.5639, grad_fn=<NllLossBackward0>)
+epoch:2
+train_acc:0.9295555555555556
+train_loss:tensor(0.0903, grad_fn=<NllLossBackward0>)
+valid_acc:0.9355
+valid_loss:tensor(0.2092, grad_fn=<NllLossBackward0>)
+test_acc:0.9401
+test_loss:tensor(0.4284, grad_fn=<NllLossBackward0>)
